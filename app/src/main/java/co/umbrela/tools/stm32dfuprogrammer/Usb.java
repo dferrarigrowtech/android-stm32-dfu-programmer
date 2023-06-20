@@ -46,7 +46,7 @@ public class Usb {
     public final static int USB_VENDOR_ID = 1155;   // VID while in DFU mode 0x0483
     public final static int USB_PRODUCT_ID = 57105; // PID while in DFU mode 0xDF11
 
-    public static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
+    public static final String ACTION_USB_PERMISSION = "co.umbrela.tools.stm32dfuprogrammer.USB_PERMISSION";
 
     /* Callback Interface */
     public interface OnUsbChangeListener {
