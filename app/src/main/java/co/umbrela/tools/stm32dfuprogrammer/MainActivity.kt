@@ -16,17 +16,36 @@
 
 package co.umbrela.tools.stm32dfuprogrammer;
 
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.hardware.usb.UsbManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Message
+import android.provider.Settings
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContentProviderCompat.requireContext
 import co.umbrela.tools.stm32dfuprogrammer.databinding.ActivityMainBinding
+import co.umbrela.tools.stm32dfuprogrammer.BuildConfig
+
 
 class MainActivity : AppCompatActivity(), Dfu.DfuListener, Usb.OnUsbChangeListener,
     Handler.Callback {
+
+    private val REQUEST_EXTERNAL_STORAGE = 1
+    private val PERMISSIONS_STORAGE = arrayOf<String>(
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+    )
 
 
     private lateinit var binding: ActivityMainBinding
@@ -71,6 +90,31 @@ class MainActivity : AppCompatActivity(), Dfu.DfuListener, Usb.OnUsbChangeListen
 
         binding.btnReleaseReset.setOnClickListener {
             Outputs.enterNormalMode()
+        }
+
+        verifyStoragePermissions(this)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+            // Access to all files
+            val uri: Uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID)
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri)
+            startActivity(intent)
+        }
+    }
+
+    fun verifyStoragePermissions(activity: Activity?) {
+        // Check if we have write permission
+        val permission = ActivityCompat.checkSelfPermission(
+            activity!!,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            // We don't have permission so prompt the user
+            ActivityCompat.requestPermissions(
+                activity,
+                PERMISSIONS_STORAGE,
+                REQUEST_EXTERNAL_STORAGE
+            )
         }
     }
 

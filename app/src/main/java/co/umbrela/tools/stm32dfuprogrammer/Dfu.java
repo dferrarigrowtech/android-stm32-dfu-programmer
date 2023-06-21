@@ -59,7 +59,9 @@ public class Dfu {
     private final static int DFU_GETSTATE = 0x05;
     private final static int DFU_ABORT = 0x06;
 
-    public final static int ELEMENT1_OFFSET = 293;  // constant offset in file array where image data starts
+    public final static int ELEMENT1_OFFSET = 0;  // constant offset in file array where image data starts
+
+    // The following 4 parameters are just for verify function
     public final static int TARGET_NAME_START = 22;
     public final static int TARGET_NAME_MAX_END = 276;
     public final static int TARGET_SIZE = 277;
@@ -272,8 +274,8 @@ public class Dfu {
             }
 
             openFile();
-            verifyFile();
-            checkCompatibility();
+            //verifyFile();
+            //checkCompatibility();
             onStatusMsg("File Path: " + dfuFile.filePath + "\n");
             onStatusMsg("File Size: " + dfuFile.file.length + " Bytes \n");
             onStatusMsg("ElementAddress: 0x" + Integer.toHexString(dfuFile.elementStartAddress));
@@ -385,7 +387,9 @@ public class Dfu {
     }
 
     private void writeImage() throws Exception {
-
+        dfuFile.elementLength = dfuFile.file.length; // Check this (?)
+        dfuFile.elementStartAddress = 0x8000000; // Check this (?)
+        dfuFile.maxBlockSize = 2048; // Check this (?)
         int address = dfuFile.elementStartAddress;  // flash start address
         int fileOffset = ELEMENT1_OFFSET;   // index offset of file
         int blockSize = dfuFile.maxBlockSize;   // max block size
@@ -488,22 +492,24 @@ public class Dfu {
 
         if (Environment.getExternalStorageState() != null)  // todo not sure if this works
         {
-            extDownload = new File(Environment.getExternalStorageDirectory() + "/Download/");
+            extDownload = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 
             if (extDownload.exists()) {
-                String[] files = extDownload.list();
+                File[] files = extDownload.listFiles();
                 // todo support multiple dfu files in dir
                 if (files.length > 0) {   // will select first dfu file found in dir
-                    for (String file : files) {
-                        if (file.endsWith(".dfu")) {
+                    for (File file : files) {
+                        if (file.getName().endsWith(".bin")) {
                             myFilePath = extDownload.toString();
-                            myFileName = file;
+                            myFileName = file.getName();
                             break;
                         }
                     }
                 }
             }
         }
+
+
         if (myFileName == null) throw new Exception("No .dfu file found in Download Folder");
 
         myFile = new File(myFilePath + "/" + myFileName);
