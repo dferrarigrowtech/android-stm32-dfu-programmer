@@ -21,11 +21,11 @@ import java.io.File
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 
-class Dfu(private val deviceVid: Int, private val devicePid: Int) {
+class Dfu {
     private val dfuFile: DfuFile
     private var usb: Usb? = null
-    private var deviceVersion //STM bootloader version
-            = 0
+    private var deviceVersion = 0 // STM bootloader version
+
     private val listeners: MutableList<DfuListener> = ArrayList()
 
     interface DfuListener {
@@ -50,15 +50,12 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
     fun setUsb(usb: Usb?) {
         this.usb = usb
         deviceVersion = this.usb!!.deviceVersion
-    }// wrap whole array// set offset and limit of firmware// Check this (?)
+    }
 
-    // Check this (?)
-    // Check this (?)
     // create byte buffer and compare content
-    // similar to verify()
     @get:Throws(Exception::class)
     private val isWrittenImageOk: Boolean
-        private get() {
+        get() {
             dfuFile.elementLength = dfuFile.file!!.size // Check this (?)
             dfuFile.elementStartAddress = 0x8000000 // Check this (?)
             dfuFile.maxBlockSize = 2048 // Check this (?)
@@ -67,14 +64,13 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
             readImage(deviceFirmware)
             // create byte buffer and compare content
             val fileFw = ByteBuffer.wrap(
-                dfuFile.file,
+                dfuFile.file!!,
                 ELEMENT1_OFFSET,
                 dfuFile.elementLength
             ) // set offset and limit of firmware
             val deviceFw = ByteBuffer.wrap(deviceFirmware) // wrap whole array
-            val result = fileFw == deviceFw
             Log.i(TAG, "Verified completed in " + (System.currentTimeMillis() - startTime) + " ms")
-            return result
+            return fileFw == deviceFw
         }
 
     fun massErase() {
@@ -136,7 +132,7 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
 
     // check if usb device is active
     private val isUsbConnected: Boolean
-        private get() {
+        get() {
             if (usb != null && usb!!.isConnected) {
                 return true
             }
@@ -164,26 +160,25 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
         val address = dfuFile.elementStartAddress // flash start address
         val fileOffset = ELEMENT1_OFFSET // index offset of file
         val blockSize = dfuFile.maxBlockSize // max block size
-        val Block = ByteArray(blockSize)
-        val NumOfBlocks = dfuFile.elementLength / blockSize
-        var blockNum: Int
-        blockNum = 0
-        while (blockNum < NumOfBlocks) {
-            System.arraycopy(dfuFile.file, blockNum * blockSize + fileOffset, Block, 0, blockSize)
+        val block = ByteArray(blockSize)
+        val numOfBlocks = dfuFile.elementLength / blockSize
+        var blockNum = 0
+        while (blockNum < numOfBlocks) {
+            System.arraycopy(dfuFile.file!!, blockNum * blockSize + fileOffset, block, 0, blockSize)
             // send out the block to device
-            writeBlock(address, Block, blockNum)
+            writeBlock(address, block, blockNum)
             blockNum++
         }
         // check if last block is partial
         var remainder = dfuFile.elementLength - blockNum * blockSize
         if (remainder > 0) {
-            System.arraycopy(dfuFile.file, blockNum * blockSize + fileOffset, Block, 0, remainder)
+            System.arraycopy(dfuFile.file!!, blockNum * blockSize + fileOffset, block, 0, remainder)
             // Pad with 0xFF so our CRC matches the ST Bootloader and the ULink's CRC
-            while (remainder < Block.size) {
-                Block[remainder++] = 0xFF.toByte()
+            while (remainder < block.size) {
+                block[remainder++] = 0xFF.toByte()
             }
             // send out the block to device
-            writeBlock(address, Block, blockNum)
+            writeBlock(address, block, blockNum)
         }
     }
 
@@ -203,7 +198,6 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
         val maxBlockSize = dfuFile.maxBlockSize
         val startAddress = dfuFile.elementStartAddress
         val block = ByteArray(maxBlockSize)
-        var nBlock: Int
         var remLength = deviceFw.size
         val numOfBlocks = remLength / maxBlockSize
         do {
@@ -219,7 +213,7 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
 
 
         // will read full and last partial blocks ( NOTE: last partial block will be read with maxkblocksize)
-        nBlock = 0
+        var nBlock: Int = 0
         while (nBlock <= numOfBlocks) {
             while (dfuStatus.bState.toInt() != STATE_DFU_IDLE) {        // todo if fails, maybe stop reading
                 clearStatus()
@@ -243,15 +237,13 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
         var myFilePath: String? = null
         var myFileName: String? = null
         val fileInputStream: FileInputStream
-        val myFile: File
         if (Environment.getExternalStorageState() != null) // todo not sure if this works
         {
             extDownload =
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             if (extDownload.exists()) {
                 val files = extDownload.listFiles()
-                // todo support multiple dfu files in dir
-                if (files.size > 0) {   // will select first dfu file found in dir
+                if (files!!.isNotEmpty()) {   // will select first dfu file found in dir
                     for (file in files) {
                         if (file.name.endsWith(".bin")) {
                             myFilePath = extDownload.toString()
@@ -263,7 +255,7 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
             }
         }
         if (myFileName == null) throw Exception("No .bin file found in Download Folder")
-        myFile = File("$myFilePath/$myFileName")
+        val myFile = File("$myFilePath/$myFileName")
         dfuFile.filePath = myFile.toString()
         dfuFile.file = ByteArray(myFile.length().toInt())
 
@@ -307,11 +299,9 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
         }
     }
 
-    // to execute
-    // to verify
     @get:Throws(Exception::class)
     private val isDeviceProtected: Boolean
-        private get() {
+        get() {
             val dfuStatus = DfuStatus()
             var isProtected = false
             do {
@@ -422,27 +412,18 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
 
     // stores the result of a GetStatus DFU request
     private inner class DfuStatus {
-        var bStatus // state during request
-                : Byte = 0
-        var bwPollTimeout // minimum time in ms before next getStatus call should be made
-                = 0
-        var bState // state after request
-                : Byte = 0
+        var bStatus: Byte = 0  // state during request
+        var bwPollTimeout = 0   // minimum time in ms before next getStatus call should be made
+        var bState: Byte = 0   // state after request
     }
 
     // holds all essential information for the Dfu File
     private inner class DfuFile {
         var filePath: String? = null
         var file: ByteArray? = null
-        var PID = 0
-        var VID = 0
-        var BootVersion = 0
         var maxBlockSize = 1024
         var elementStartAddress = 0
         var elementLength = 0
-        var TargetName: String? = null
-        var TargetSize = 0
-        var NumElements = 0
     }
 
     companion object {
@@ -474,26 +455,7 @@ class Dfu(private val deviceVid: Int, private val devicePid: Int) {
         private const val DFU_ABORT = 0x06
         const val ELEMENT1_OFFSET = 0 // constant offset in file array where image data starts
 
-        // The following 4 parameters are just for verify function
-        const val TARGET_NAME_START = 22
-        const val TARGET_NAME_MAX_END = 276
-        const val TARGET_SIZE = 277
-        const val TARGET_NUM_ELEMENTS = 281
-
         // Device specific parameters
-        const val mInternalFlashString =
-            "@Internal Flash  /0x08000000/04*016Kg,01*064Kg,07*128Kg" // STM32F405RG, 1MB Flash, 192KB SRAM
-        const val mInternalFlashSize = 1048575
         const val mInternalFlashStartAddress = 0x08000000
-        const val mOptionByteStartAddress = 0x1FFFC000
-        private const val OPT_BOR_1 = 0x08
-        private const val OPT_BOR_2 = 0x04
-        private const val OPT_BOR_3 = 0x00
-        private const val OPT_BOR_OFF = 0x0C
-        private const val OPT_WDG_SW = 0x20
-        private const val OPT_nRST_STOP = 0x40
-        private const val OPT_nRST_STDBY = 0x80
-        private const val OPT_RDP_OFF = 0xAA00
-        private const val OPT_RDP_1 = 0x3300
     }
 }

@@ -46,7 +46,10 @@ class Usb(private val mContext: Context) {
     }
 
     inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? = when {
-        SDK_INT > 33 -> getParcelableExtra(key, T::class.java)              // Should be >= instead of >. But there is a bug on API level 33
+        SDK_INT > 33 -> getParcelableExtra(
+            key,
+            T::class.java
+        )              // Should be >= instead of >. But there is a bug on API level 33
         else -> @Suppress("DEPRECATION") getParcelableExtra(key) as? T
     }
 
@@ -58,7 +61,7 @@ class Usb(private val mContext: Context) {
             val action = intent.action
             if (ACTION_USB_PERMISSION == action) {
                 synchronized(this) {
-                    val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
+                    val device = intent.parcelable<UsbDevice>(UsbManager.EXTRA_DEVICE)
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
                         if (device != null) {
                             //call method to set up device communication
@@ -83,7 +86,7 @@ class Usb(private val mContext: Context) {
             } else if (UsbManager.ACTION_USB_DEVICE_DETACHED == action) {
                 synchronized(this) {
 
-                    val device = intent.parcelable<UsbDevice>(UsbManager.EXTRA_DEVICE)//intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
+                    val device = intent.parcelable<UsbDevice>(UsbManager.EXTRA_DEVICE)
                     if (usbDevice != null && usbDevice == device) {
                         release()
                     }
@@ -103,7 +106,7 @@ class Usb(private val mContext: Context) {
     fun requestPermission(context: Context?, vendorId: Int, productId: Int) {
         // Setup Pending Intent
         val permissionIntent =
-            PendingIntent.getBroadcast(context, 0, Intent(ACTION_USB_PERMISSION), 0)
+            PendingIntent.getBroadcast(context, 0, Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_MUTABLE )
         val device = getUsbDevice(vendorId, productId)
         if (device != null) {
             mUsbManager!!.requestPermission(device, permissionIntent)
@@ -139,21 +142,20 @@ class Usb(private val mContext: Context) {
         // The first interface is the one we want
         mInterface =
             device!!.getInterface(0) // todo check when changing if alternative interface is changing
-        if (device != null) {
-            val connection = mUsbManager!!.openDevice(device)
-            if (connection != null && connection.claimInterface(mInterface, true)) {
-                Log.i(TAG, "open SUCCESS")
-                mConnection = connection
+        val connection = mUsbManager!!.openDevice(device)
 
-                // get the bcdDevice version
-                val rawDescriptor = mConnection!!.rawDescriptors
-                deviceVersion = rawDescriptor[13].toInt() shl 8
-                deviceVersion = deviceVersion or rawDescriptor[12].toInt()
-                Log.i("USB", getDeviceInfo(device))
-            } else {
-                Log.e(TAG, "open FAIL")
-                mConnection = null
-            }
+        if (connection != null && connection.claimInterface(mInterface, true)) {
+            Log.i(TAG, "open SUCCESS")
+            mConnection = connection
+
+            // get the bcdDevice version
+            val rawDescriptor = mConnection!!.rawDescriptors
+            deviceVersion = rawDescriptor[13].toInt() shl 8
+            deviceVersion = deviceVersion or rawDescriptor[12].toInt()
+            Log.i("USB", getDeviceInfo(device))
+        } else {
+            Log.e(TAG, "open FAIL")
+            mConnection = null
         }
     }
 

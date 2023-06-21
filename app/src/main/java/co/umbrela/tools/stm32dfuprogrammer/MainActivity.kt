@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package co.umbrela.tools.stm32dfuprogrammer;
+package co.umbrela.tools.stm32dfuprogrammer
 
 import android.Manifest
 import android.app.Activity
@@ -32,16 +32,14 @@ import android.provider.Settings
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContentProviderCompat.requireContext
 import co.umbrela.tools.stm32dfuprogrammer.databinding.ActivityMainBinding
-import co.umbrela.tools.stm32dfuprogrammer.BuildConfig
 
 
 class MainActivity : AppCompatActivity(), Dfu.DfuListener, Usb.OnUsbChangeListener,
     Handler.Callback {
 
     private val REQUEST_EXTERNAL_STORAGE = 1
-    private val PERMISSIONS_STORAGE = arrayOf<String>(
+    private val PERMISSIONS_STORAGE = arrayOf(
         Manifest.permission.READ_EXTERNAL_STORAGE,
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
         Manifest.permission.MANAGE_EXTERNAL_STORAGE,
@@ -59,7 +57,7 @@ class MainActivity : AppCompatActivity(), Dfu.DfuListener, Usb.OnUsbChangeListen
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        dfu = Dfu(Usb.USB_VENDOR_ID, Usb.USB_PRODUCT_ID)
+        dfu = Dfu()
         dfu.setListener(this)
 
         status = binding.tvStatus
@@ -76,26 +74,6 @@ class MainActivity : AppCompatActivity(), Dfu.DfuListener, Usb.OnUsbChangeListen
             dfu.myVerify()
         }
 
-        /*binding.btnForceErase.setOnClickListener {
-            dfu.fastOperations()
-        }
-
-        binding.btnVerify.setOnClickListener {
-            dfu.verify()
-        }
-
-        binding.btnEnterDfu.setOnClickListener {
-            Outputs.enterDfuMode()
-        }
-
-        binding.btnLeaveDfu.setOnClickListener {
-            dfu.leaveDfuMode()
-        }
-
-        binding.btnReleaseReset.setOnClickListener {
-            Outputs.enterNormalMode()
-        }*/
-
         verifyStoragePermissions(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
@@ -106,7 +84,7 @@ class MainActivity : AppCompatActivity(), Dfu.DfuListener, Usb.OnUsbChangeListen
         }
     }
 
-    fun verifyStoragePermissions(activity: Activity?) {
+    private fun verifyStoragePermissions(activity: Activity?) {
         // Check if we have write permission
         val permission = ActivityCompat.checkSelfPermission(
             activity!!,
