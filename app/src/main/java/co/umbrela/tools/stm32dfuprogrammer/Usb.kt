@@ -23,6 +23,8 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
+import android.os.Build.VERSION.SDK_INT
+import android.os.Parcelable
 import android.util.Log
 
 class Usb(private val mContext: Context) {
@@ -41,6 +43,11 @@ class Usb(private val mContext: Context) {
 
     fun setOnUsbChangeListener(l: OnUsbChangeListener?) {
         mOnUsbChangeListener = l
+    }
+
+    inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? = when {
+        SDK_INT > 33 -> getParcelableExtra(key, T::class.java)              // Should be >= instead of >. But there is a bug on API level 33
+        else -> @Suppress("DEPRECATION") getParcelableExtra(key) as? T
     }
 
     private var mOnUsbChangeListener: OnUsbChangeListener? = null
@@ -75,7 +82,8 @@ class Usb(private val mContext: Context) {
                 }
             } else if (UsbManager.ACTION_USB_DEVICE_DETACHED == action) {
                 synchronized(this) {
-                    val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
+
+                    val device = intent.parcelable<UsbDevice>(UsbManager.EXTRA_DEVICE)//intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
                     if (usbDevice != null && usbDevice == device) {
                         release()
                     }
