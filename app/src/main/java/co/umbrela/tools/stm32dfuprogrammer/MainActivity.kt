@@ -72,7 +72,11 @@ class MainActivity : AppCompatActivity(), Dfu.DfuListener, Usb.OnUsbChangeListen
             dfu.program()
         }
 
-        binding.btnForceErase.setOnClickListener {
+        binding.btnMyVerify.setOnClickListener {
+            dfu.myVerify()
+        }
+
+        /*binding.btnForceErase.setOnClickListener {
             dfu.fastOperations()
         }
 
@@ -90,7 +94,7 @@ class MainActivity : AppCompatActivity(), Dfu.DfuListener, Usb.OnUsbChangeListen
 
         binding.btnReleaseReset.setOnClickListener {
             Outputs.enterNormalMode()
-        }
+        }*/
 
         verifyStoragePermissions(this)
 

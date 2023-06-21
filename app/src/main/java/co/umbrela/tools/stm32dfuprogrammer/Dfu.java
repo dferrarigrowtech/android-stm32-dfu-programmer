@@ -178,6 +178,9 @@ public class Dfu {
 
     // similar to verify()
     private boolean isWrittenImageOk() throws Exception {
+        dfuFile.elementLength = dfuFile.file.length; // Check this (?)
+        dfuFile.elementStartAddress = 0x8000000; // Check this (?)
+        dfuFile.maxBlockSize = 2048; // Check this (?)
         byte[] deviceFirmware = new byte[dfuFile.elementLength];
         long startTime = System.currentTimeMillis();
         readImage(deviceFirmware);
@@ -413,6 +416,17 @@ public class Dfu {
             // send out the block to device
             writeBlock(address, Block, blockNum);
         }
+    }
+
+    public void myVerify() {
+        try{
+            openFile();
+            boolean result = isWrittenImageOk();
+            onStatusMsg(result ? "Image Written is OK" : "Image written is NOT ok");
+        } catch (Exception e) {
+            onStatusMsg("Error in verifying the image");
+        }
+
     }
 
 

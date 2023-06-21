@@ -8,16 +8,11 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
     <Button
         android:id="@+id/btnMassErase"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:text="Mass erase" />
 
     <Button
@@ -26,12 +21,12 @@
         android:layout_height="wrap_content"
         android:text="Program" />
 
-    <TextView
-        android:id="@+id/tvStatus2"
+    <Button
+        android:id="@+id/btnMyVerify"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="TextView" />
-
+        android:text="My verify" />
+    <!--
     <Button
         android:id="@+id/btnForceErase"
         android:layout_width="match_parent"
@@ -61,4 +56,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Release Reset" />
+    -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
 </LinearLayout>
