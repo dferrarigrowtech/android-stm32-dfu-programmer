@@ -22,41 +22,10 @@
         android:text="Program" />
 
     <Button
-        android:id="@+id/btnMyVerify"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="My verify" />
-    <!--
-    <Button
-        android:id="@+id/btnForceErase"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Force erase" />
-
-    <Button
         android:id="@+id/btnVerify"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Verify" />
-
-    <Button
-        android:id="@+id/btnEnterDfu"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Enter DFU" />
-
-    <Button
-        android:id="@+id/btnLeaveDfu"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Leave DFU" />
-
-    <Button
-        android:id="@+id/btnReleaseReset"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Release Reset" />
-    -->
     <TextView
         android:id="@+id/tvStatus"
         android:layout_width="match_parent"

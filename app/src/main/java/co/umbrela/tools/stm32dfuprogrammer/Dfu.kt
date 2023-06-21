@@ -59,9 +59,8 @@ class Dfu {
             dfuFile.elementLength = dfuFile.file!!.size // Check this (?)
             dfuFile.elementStartAddress = 0x8000000 // Check this (?)
             dfuFile.maxBlockSize = 2048 // Check this (?)
-            val deviceFirmware = ByteArray(dfuFile.elementLength)
             val startTime = System.currentTimeMillis()
-            readImage(deviceFirmware)
+            val deviceFirmware = readImage(dfuFile.elementLength)
             // create byte buffer and compare content
             val fileFw = ByteBuffer.wrap(
                 dfuFile.file!!,
@@ -75,12 +74,12 @@ class Dfu {
 
     fun massErase() {
         if (!isUsbConnected) return
-        val dfuStatus = DfuStatus()
+        var dfuStatus : DfuStatus
         val startTime = System.currentTimeMillis() // note current time
         try {
             do {
                 clearStatus()
-                getStatus(dfuStatus)
+                dfuStatus = getStatus()
             } while (dfuStatus.bState.toInt() != STATE_DFU_IDLE)
             if (isDeviceProtected) {
                 removeReadProtection()
@@ -88,13 +87,13 @@ class Dfu {
                 return
             }
             massEraseCommand() // sent erase command request
-            getStatus(dfuStatus) // initiate erase command, returns 'download busy' even if invalid address or ROP
+            dfuStatus = getStatus() // initiate erase command, returns 'download busy' even if invalid address or ROP
             val pollingTime = dfuStatus.bwPollTimeout // note requested waiting time
             do {
                 /* wait specified time before next getStatus call */
                 Thread.sleep(pollingTime.toLong())
                 clearStatus()
-                getStatus(dfuStatus)
+                dfuStatus = getStatus()
             } while (dfuStatus.bState.toInt() != STATE_DFU_IDLE)
             onStatusMsg("Mass erase completed in " + (System.currentTimeMillis() - startTime) + " ms")
         } catch (e: InterruptedException) {
@@ -142,9 +141,8 @@ class Dfu {
 
     @Throws(Exception::class)
     private fun removeReadProtection() {
-        val dfuStatus = DfuStatus()
         unProtectCommand()
-        getStatus(dfuStatus)
+        val dfuStatus = getStatus()
         if (dfuStatus.bState.toInt() != STATE_DFU_DOWNLOAD_BUSY) {
             throw Exception("Failed to execute unprotect command")
         }
@@ -182,7 +180,7 @@ class Dfu {
         }
     }
 
-    fun myVerify() {
+    fun verify() {
         try {
             openFile()
             val result = isWrittenImageOk
@@ -193,34 +191,35 @@ class Dfu {
     }
 
     @Throws(Exception::class)
-    private fun readImage(deviceFw: ByteArray) {
-        val dfuStatus = DfuStatus()
+    private fun readImage(bytesToRead : Int) : ByteArray {
+        var dfuStatus: DfuStatus
         val maxBlockSize = dfuFile.maxBlockSize
         val startAddress = dfuFile.elementStartAddress
         val block = ByteArray(maxBlockSize)
-        var remLength = deviceFw.size
+        var remLength = bytesToRead
         val numOfBlocks = remLength / maxBlockSize
         do {
             clearStatus()
-            getStatus(dfuStatus)
+            dfuStatus = getStatus()
         } while (dfuStatus.bState.toInt() != STATE_DFU_IDLE)
         setAddressPointer(startAddress)
-        getStatus(dfuStatus) // to execute
-        getStatus(dfuStatus) //to verify
+        getStatus()             // to execute
+        dfuStatus = getStatus() //to verify
         if (dfuStatus.bState.toInt() == STATE_DFU_ERROR) {
             throw Exception("Start address not supported")
         }
 
-
         // will read full and last partial blocks ( NOTE: last partial block will be read with maxkblocksize)
-        var nBlock: Int = 0
+        var nBlock = 0
+
+        val deviceFw = ByteArray(remLength)
         while (nBlock <= numOfBlocks) {
             while (dfuStatus.bState.toInt() != STATE_DFU_IDLE) {        // todo if fails, maybe stop reading
                 clearStatus()
-                getStatus(dfuStatus)
+                dfuStatus = getStatus()
             }
             upload(block, maxBlockSize, nBlock + 2)
-            getStatus(dfuStatus)
+            dfuStatus = getStatus()
             if (remLength >= maxBlockSize) {
                 remLength -= maxBlockSize
                 System.arraycopy(block, 0, deviceFw, nBlock * maxBlockSize, maxBlockSize)
@@ -229,6 +228,7 @@ class Dfu {
             }
             nBlock++
         }
+        return deviceFw
     }
 
     @Throws(Exception::class)
@@ -267,56 +267,56 @@ class Dfu {
 
     @Throws(Exception::class)
     private fun writeBlock(address: Int, block: ByteArray, blockNumber: Int) {
-        val dfuStatus = DfuStatus()
+        var dfuStatus : DfuStatus
         do {
             clearStatus()
-            getStatus(dfuStatus)
+            dfuStatus = getStatus()
         } while (dfuStatus.bState.toInt() != STATE_DFU_IDLE)
         if (0 == blockNumber) {
             setAddressPointer(address)
-            getStatus(dfuStatus)
-            getStatus(dfuStatus)
+            getStatus()
+            dfuStatus = getStatus()
             if (dfuStatus.bState.toInt() == STATE_DFU_ERROR) {
                 throw Exception("Start address not supported")
             }
         }
         do {
             clearStatus()
-            getStatus(dfuStatus)
+            dfuStatus = getStatus()
         } while (dfuStatus.bState.toInt() != STATE_DFU_IDLE)
         download(block, blockNumber + 2)
-        getStatus(dfuStatus) // to execute
+        dfuStatus = getStatus() // to execute
         if (dfuStatus.bState.toInt() != STATE_DFU_DOWNLOAD_BUSY) {
             throw Exception("error when downloading, was not busy ")
         }
-        getStatus(dfuStatus) // to verify action
+        dfuStatus = getStatus() // to verify action
         if (dfuStatus.bState.toInt() == STATE_DFU_ERROR) {
             throw Exception("error when downloading, did not perform action")
         }
         while (dfuStatus.bState.toInt() != STATE_DFU_IDLE) {
             clearStatus()
-            getStatus(dfuStatus)
+            dfuStatus = getStatus()
         }
     }
 
     @get:Throws(Exception::class)
     private val isDeviceProtected: Boolean
         get() {
-            val dfuStatus = DfuStatus()
+            var dfuStatus : DfuStatus
             var isProtected = false
             do {
                 clearStatus()
-                getStatus(dfuStatus)
+                dfuStatus = getStatus()
             } while (dfuStatus.bState.toInt() != STATE_DFU_IDLE)
             setAddressPointer(mInternalFlashStartAddress)
-            getStatus(dfuStatus) // to execute
-            getStatus(dfuStatus) // to verify
+            getStatus()             // to execute
+            dfuStatus = getStatus() // to verify
             if (dfuStatus.bState.toInt() == STATE_DFU_ERROR) {
                 isProtected = true
             }
             while (dfuStatus.bState.toInt() != STATE_DFU_IDLE) {
                 clearStatus()
-                getStatus(dfuStatus)
+                dfuStatus = getStatus()
             }
             return isProtected
         }
@@ -347,7 +347,7 @@ class Dfu {
     }
 
     @Throws(Exception::class)
-    private fun getStatus(status: DfuStatus) {
+    private fun getStatus() : DfuStatus {
         val buffer = ByteArray(6)
         val length = usb!!.controlTransfer(
             DFU_RequestType or USB_DIR_IN,
@@ -361,11 +361,14 @@ class Dfu {
         if (length < 0) {
             throw Exception("USB Failed during getStatus")
         }
+
+        val status = DfuStatus()
         status.bStatus = buffer[0] // state during request
         status.bState = buffer[4] // state after request
         status.bwPollTimeout = buffer[3].toInt() and 0xFF shl 16
         status.bwPollTimeout = status.bwPollTimeout or (buffer[2].toInt() and 0xFF shl 8)
         status.bwPollTimeout = status.bwPollTimeout or (buffer[1].toInt() and 0xFF)
+        return status
     }
 
     @Throws(Exception::class)

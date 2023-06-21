@@ -70,8 +70,8 @@ class MainActivity : AppCompatActivity(), Dfu.DfuListener, Usb.OnUsbChangeListen
             dfu.program()
         }
 
-        binding.btnMyVerify.setOnClickListener {
-            dfu.myVerify()
+        binding.btnVerify.setOnClickListener {
+            dfu.verify()
         }
 
         verifyStoragePermissions(this)
